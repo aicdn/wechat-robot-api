@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>企业微信机器人推送示例</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-md rounded-lg mb-8">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div class="flex items-center">
+          <i class="fa fa-wechat text-green-500 text-3xl mr-3"></i>
+          <h1 class="text-2xl font-bold text-gray-800">企业微信机器人推送示例</h1>
+        </div>
+        <div>
+          <a href="https://work.weixin.qq.com/" target="_blank" class="text-blue-500 hover:text-blue-700 flex items-center">
+            <i class="fa fa-external-link mr-1"></i> 企业微信官网
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- 左侧：表单区域 -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+            <i class="fa fa-paper-plane text-blue-500 mr-2"></i> 发送消息到企业微信群
+          </h2>
+          
+          <form id="wechatForm" class="space-y-4">
+            <!-- API URL -->
+            <div>
+              <label for="apiUrl" class="block text-sm font-medium text-gray-700 mb-1">API URL</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                  <i class="fa fa-link"></i>
+                </span>
+                <input type="text" id="apiUrl" name="apiUrl" 
+                  class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://your-worker.your-account.workers.dev"
+                  required>
+              </div>
+              <p class="mt-1 text-xs text-gray-500">输入您部署的Cloudflare Worker API地址</p>
+            </div>
+            
+            <!-- 验证令牌 -->
+            <div>
+              <label for="verificationToken" class="block text-sm font-medium text-gray-700 mb-1">验证令牌 (可选)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                  <i class="fa fa-shield"></i>
+                </span>
+                <input type="text" id="verificationToken" name="verificationToken" 
+                  class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="输入验证令牌（如果配置了的话）">
+              </div>
+              <p class="mt-1 text-xs text-gray-500">如果您的API配置了验证令牌，请在此处输入</p>
+            </div>
+            
+            <!-- 消息类型 -->
+            <div>
+              <label for="msgtype" class="block text-sm font-medium text-gray-700 mb-1">消息类型</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                  <i class="fa fa-file-text-o"></i>
+                </span>
+                <select id="msgtype" name="msgtype" 
+                  class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required>
+                  <option value="text">文本消息</option>
+                  <option value="markdown">Markdown消息</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- 消息内容 -->
+            <div>
+              <label for="content" class="block text-sm font-medium text-gray-700 mb-1">消息内容</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                  <i class="fa fa-comment"></i>
+                </span>
+                <textarea id="content" name="content" rows="5"
+                  class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="请输入要发送的消息内容..."
+                  required></textarea>
+              </div>
+              <div id="markdownPreview" class="mt-2 p-3 bg-gray-50 rounded-md border border-gray-200 hidden">
+                <h4 class="text-sm font-medium text-gray-700 mb-1">Markdown预览</h4>
+                <div id="previewContent" class="text-sm"></div>
+              </div>
+            </div>
+            
+            <!-- @成员（手机号列表） -->
+            <div>
+              <label for="mentioned_mobile_list" class="block text-sm font-medium text-gray-700 mb-1">@成员（手机号）</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                  <i class="fa fa-at"></i>
+                </span>
+                <input type="text" id="mentioned_mobile_list" name="mentioned_mobile_list" 
+                  class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="用逗号分隔的手机号列表，@all表示所有人">
+              </div>
+              <p class="mt-1 text-xs text-gray-500">例如：13800001111,13900002222 或 @all</p>
+            </div>
+            
+            <!-- 提交按钮 -->
+            <div class="pt-2">
+              <button type="submit" id="submitButton" 
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition duration-300 flex items-center justify-center">
+                <i class="fa fa-paper-plane mr-2"></i> 发送消息
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- 响应结果区域 -->
+        <div id="responseArea" class="bg-white rounded-lg shadow-md p-6 hidden">
+          <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+            <i class="fa fa-exchange text-purple-500 mr-2"></i> 响应结果
+          </h2>
+          
+          <div id="successResponse" class="p-4 bg-green-50 border border-green-200 rounded-md hidden">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <i class="fa fa-check-circle text-green-500 text-xl"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-green-800">发送成功</h3>
+                <div class="mt-2 text-sm text-green-700">
+                  <p id="successMessage"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="errorResponse" class="p-4 bg-red-50 border border-red-200 rounded-md hidden">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <i class="fa fa-times-circle text-red-500 text-xl"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">发送失败</h3>
+                <div class="mt-2 text-sm text-red-700">
+                  <p id="errorMessage"></p>
+                  <div id="errorDetails" class="mt-2 p-2 bg-red-100 rounded text-xs hidden"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="responseJson" class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">API响应</h3>
+            <pre id="jsonOutput" class="text-xs overflow-x-auto p-2 bg-white rounded"></pre>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 右侧：使用指南 -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+            <i class="fa fa-book text-green-500 mr-2"></i> 使用指南
+          </h2>
+          
+          <div class="space-y-4 text-sm">
+            <div>
+              <h3 class="font-medium text-gray-700 mb-1">1. 获取API URL</h3>
+              <p class="text-gray-600">输入您部署的Cloudflare Worker API地址。</p>
+            </div>
+            
+            <div>
+              <h3 class="font-medium text-gray-700 mb-1">2. 验证令牌（可选）</h3>
+              <p class="text-gray-600">如果您的API配置了验证令牌，请在此处输入。</p>
+            </div>
+            
+            <div>
+              <h3 class="font-medium text-gray-700 mb-1">3. 选择消息类型</h3>
+              <p class="text-gray-600">选择要发送的消息类型：文本或Markdown。</p>
+            </div>
+            
+            <div>
+              <h3 class="font-medium text-gray-700 mb-1">4. 输入消息内容</h3>
+              <p class="text-gray-600">
+                输入要发送的消息内容。如果选择Markdown类型，可以使用Markdown语法格式化文本。
+              </p>
+              <div class="mt-2 p-2 bg-gray-50 rounded text-xs">
+                <p class="font-medium">Markdown支持的语法：</p>
+                <ul class="list-disc list-inside mt-1 space-y-1">
+                  <li># 标题1</li>
+                  <li>## 标题2</li>
+                  <li>**加粗文本**</li>
+                  <li>*斜体文本*</li>
+                  <li>`代码片段`</li>
+                  <li>> 引用内容</li>
+                  <li>![图片](url)</li>
+                  <li>[链接](url)</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="font-medium text-gray-700 mb-1">5. @成员（可选）</h3>
+              <p class="text-gray-600">
+                输入要@的成员手机号，用逗号分隔。输入@all可以@所有人。
+              </p>
+            </div>
+            
+            <div>
+              <h3 class="font-medium text-gray-700 mb-1">6. 发送消息</h3>
+              <p class="text-gray-600">点击"发送消息"按钮，将消息发送到企业微信群。</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 示例消息 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+            <i class="fa fa-lightbulb-o text-yellow-500 mr-2"></i> 示例消息
+          </h2>
+          
+          <div class="space-y-3">
+            <button class="example-btn w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded text-sm border border-gray-200 transition duration-200"
+                    data-type="text"
+                    data-content="大家好，这是一条测试消息！\n\n今天的会议将于下午3点在会议室A举行，请大家准时参加。">
+              <i class="fa fa-file-text-o text-blue-500 mr-2"></i> 普通文本消息
+            </button>
+            
+            <button class="example-btn w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded text-sm border border-gray-200 transition duration-200"
+                    data-type="markdown"
+                    data-content="# 项目进度报告\n\n## 本周完成情况\n\n- **前端开发**：完成了登录页面和首页的设计与实现\n- **后端开发**：实现了用户认证API和数据存储功能\n- **测试**：完成了单元测试和集成测试\n\n## 下周计划\n\n1. 完成支付功能集成\n2. 进行系统性能优化\n3. 准备用户验收测试\n\n> 请相关负责人按时完成任务。">
+              <i class="fa fa-file-text text-green-500 mr-2"></i> Markdown格式报告
+            </button>
+            
+            <button class="example-btn w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded text-sm border border-gray-200 transition duration-200"
+                    data-type="text"
+                    data-content="⚠️ 系统预警：服务器CPU使用率超过90%！\n\n请相关人员立即处理。"
+                    data-mention="@all">
+              <i class="fa fa-exclamation-triangle text-red-500 mr-2"></i> 系统预警消息
+            </button>
+            
+            <button class="example-btn w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded text-sm border border-gray-200 transition duration-200"
+                    data-type="markdown"
+                    data-content="## 今日天气提醒\n\n**城市**：北京\n**温度**：25°C ~ 32°C\n**天气**：晴转多云\n**空气质量**：良\n\n> 今天天气炎热，请大家注意防暑降温。">
+              <i class="fa fa-sun-o text-yellow-500 mr-2"></i> 天气提醒
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="mt-12 text-center text-gray-500 text-sm">
+      <p>© 2025 企业微信机器人推送示例 | 基于Cloudflare Worker构建</p>
+    </footer>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('wechatForm');
+      const submitButton = document.getElementById('submitButton');
+      const responseArea = document.getElementById('responseArea');
+      const successResponse = document.getElementById('successResponse');
+      const errorResponse = document.getElementById('errorResponse');
+      const successMessage = document.getElementById('successMessage');
+      const errorMessage = document.getElementById('errorMessage');
+      const errorDetails = document.getElementById('errorDetails');
+      const jsonOutput = document.getElementById('jsonOutput');
+      const msgtypeSelect = document.getElementById('msgtype');
+      const contentTextarea = document.getElementById('content');
+      const markdownPreview = document.getElementById('markdownPreview');
+      const previewContent = document.getElementById('previewContent');
+      const exampleButtons = document.querySelectorAll('.example-btn');
+      
+      // Markdown简单解析器
+      function parseMarkdown(text) {
+        // 替换标题
+        text = text.replace(/^# (.*$)/gm, '<h1 class="text-lg font-bold mb-2">$1</h1>');
+        text = text.replace(/^## (.*$)/gm, '<h2 class="text-md font-bold mb-1">$1</h2>');
+        text = text.replace(/^### (.*$)/gm, '<h3 class="text-sm font-bold mb-1">$1</h3>');
+        
+        // 替换加粗
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // 替换斜体
+        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // 替换代码
+        text = text.replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-xs">$1</code>');
+        
+        // 替换引用
+        text = text.replace(/^> (.*$)/gm, '<blockquote class="pl-2 border-l-2 border-gray-300 italic text-gray-600">$1</blockquote>');
+        
+        // 替换无序列表
+        text = text.replace(/^\s*\n\*\s(.*$)/gm, '<ul class="list-disc list-inside ml-4 mb-2"><li>$1</li></ul>');
+        text = text.replace(/^\s*\n\d+\.\s(.*$)/gm, '<ol class="list-decimal list-inside ml-4 mb-2"><li>$1</li></ol>');
+        
+        // 替换链接
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-500 hover:underline">$1</a>');
+        
+        // 替换图片
+        text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded my-2">');
+        
+        // 替换换行
+        text = text.replace(/\n/g, '<br>');
+        
+        return text;
+      }
+      
+      // 更新Markdown预览
+      function updateMarkdownPreview() {
+        if (msgtypeSelect.value === 'markdown') {
+          markdownPreview.classList.remove('hidden');
+          previewContent.innerHTML = parseMarkdown(contentTextarea.value);
+        } else {
+          markdownPreview.classList.add('hidden');
+        }
+      }
+      
+      // 消息类型切换事件
+      msgtypeSelect.addEventListener('change', function() {
+        updateMarkdownPreview();
+      });
+      
+      // 内容输入事件
+      contentTextarea.addEventListener('input', function() {
+        updateMarkdownPreview();
+      });
+      
+      // 示例按钮点击事件
+      exampleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const type = this.getAttribute('data-type');
+          const content = this.getAttribute('data-content');
+          const mention = this.getAttribute('data-mention');
+          
+          msgtypeSelect.value = type;
+          contentTextarea.value = content;
+          
+          if (mention) {
+            document.getElementById('mentioned_mobile_list').value = mention;
+          }
+          
+          updateMarkdownPreview();
+          
+          // 滚动到表单顶部
+          form.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+      
+      // 表单提交事件
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // 获取表单数据
+        const apiUrl = document.getElementById('apiUrl').value;
+        const verificationToken = document.getElementById('verificationToken').value;
+        const msgtype = document.getElementById('msgtype').value;
+        const content = document.getElementById('content').value;
+        const mentioned_mobile_list = document.getElementById('mentioned_mobile_list').value;
+        
+        // 构建请求数据
+        const formData = new FormData();
+        formData.append('content', content);
+        formData.append('msgtype', msgtype);
+        
+        if (mentioned_mobile_list) {
+          formData.append('mentioned_mobile_list', mentioned_mobile_list);
+        }
+        
+        // 构建请求头
+        const headers = {};
+        if (verificationToken) {
+          headers['X-Verification-Token'] = verificationToken;
+        }
+        
+        // 更新按钮状态
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 发送中...';
+        
+        try {
+          // 发送请求
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: formData,
+            headers: headers
+          });
+          
+          // 解析响应
+          const result = await response.json();
+          
+          // 显示响应区域
+          responseArea.classList.remove('hidden');
+          
+          // 显示JSON响应
+          jsonOutput.textContent = JSON.stringify(result, null, 2);
+          
+          // 显示成功或错误消息
+          if (result.success) {
+            successResponse.classList.remove('hidden');
+            errorResponse.classList.add('hidden');
+            successMessage.textContent = result.message;
+            
+            // 滚动到响应区域
+            responseArea.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            successResponse.classList.add('hidden');
+            errorResponse.classList.remove('hidden');
+            errorMessage.textContent = result.message;
+            
+            // 显示错误详情（如果有）
+            if (result.error && result.error.details) {
+              errorDetails.textContent = `错误详情: ${result.error.details}`;
+              errorDetails.classList.remove('hidden');
+            } else {
+              errorDetails.classList.add('hidden');
+            }
+            
+            // 滚动到响应区域
+            responseArea.scrollIntoView({ behavior: 'smooth' });
+          }
+        } catch (error) {
+          // 显示错误信息
+          responseArea.classList.remove('hidden');
+          successResponse.classList.add('hidden');
+          errorResponse.classList.remove('hidden');
+          errorMessage.textContent = '发送请求时发生错误';
+          errorDetails.textContent = `错误详情: ${error.message}`;
+          errorDetails.classList.remove('hidden');
+          
+          // 显示JSON响应
+          jsonOutput.textContent = JSON.stringify({
+            success: false,
+            message: '发送请求时发生错误',
+            error: {
+              code: 'REQUEST_ERROR',
+              details: error.message
+            }
+          }, null, 2);
+          
+          // 滚动到响应区域
+          responseArea.scrollIntoView({ behavior: 'smooth' });
+        } finally {
+          // 恢复按钮状态
+          submitButton.disabled = false;
+          submitButton.innerHTML = '<i class="fa fa-paper-plane mr-2"></i> 发送消息';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
